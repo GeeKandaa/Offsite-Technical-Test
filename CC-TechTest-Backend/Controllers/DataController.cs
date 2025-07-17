@@ -1,4 +1,5 @@
 ﻿using CC_TechTest_Backend.Configuration;
+using CC_TechTest_Backend.Data;
 using CC_TechTest_Backend.Models;
 using CC_TechTest_Backend.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -11,66 +12,142 @@ namespace CC_TechTest_Backend.Controllers
     public class DataController : ControllerBase
     {
         private readonly Config Configuration;
-        public DataController(IOptions<Config> config)
+        private MeterDbContext Context;
+
+        public DataController(IOptions<Config> config, MeterDbContext context)
         {
             Configuration = config.Value;
+            Context = context;
         }
 
         [HttpGet("/data")]
         public async Task<IActionResult> GetAll()
         {
-            return Ok(InMemoryStorage.GetAll());
+            try
+            {
+                if (Configuration.useInMemoryStorage)
+                    return Ok(InMemoryStorage.GetAll());
+                else
+                    return Ok(await QueryContext.GetAll(Context));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
         }
 
         [HttpGet("/data/mpan/{mpan}")]
         public async Task<IActionResult> GetByMpan(string mpan)
         {
-            var entries = InMemoryStorage.GetByMpan(mpan).ToList();
-            if (entries.Count == 0)
-                return NotFound();
-            else
-                return Ok(entries);
+            try
+            {
+                List<RowData> entries = new();
+                if (Configuration.useInMemoryStorage)
+                    entries = InMemoryStorage.GetByMpan(mpan).ToList();
+                else
+                    entries = await QueryContext.GetByMpan(mpan, Context);
+
+                if (entries.Count == 0)
+                    return NotFound();
+                else
+                    return Ok(entries);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
         }
 
         [HttpGet("/data/serial/{serial}")]
-        public IActionResult GetBySerial(string serial)
-        {
-            var entries = InMemoryStorage.GetBySerial(serial).ToList();
-            if (entries.Count == 0)
-                return NotFound();
-            else
-                return Ok(entries);
+        public async Task<IActionResult> GetBySerial(string serial)
+        {        
+            try
+            {
+                List<RowData> entries = new();
+                if (Configuration.useInMemoryStorage)
+                    entries = InMemoryStorage.GetBySerial(serial).ToList();
+                else
+                    entries = await QueryContext.GetBySerial(serial, Context);
+                
+                if (entries.Count == 0)
+                    return NotFound();
+                else
+                    return Ok(entries);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
         }
-        [HttpGet("/data/installdate/{installDate}")]
-        public IActionResult GetByDate(string installDate)
-        {
-            RowData rowData = new RowData();
-            if (!Validation.TryValidateDateOfInstallation(installDate, ref rowData))
-                return BadRequest("Invalid date format. Expected format is YYYYMMDD.");
 
-            var entries = InMemoryStorage.GetByDate(rowData.DateOfInstallation).ToList();
-            if (entries.Count == 0)
-                return NotFound();
-            else
-                return Ok(entries);
+        [HttpGet("/data/installdate/{installDate}")]
+        public async Task<IActionResult> GetByDate(string installDate)
+        {
+            try
+            {
+                RowData rowData = new RowData();
+                if (!Validation.TryValidateDateOfInstallation(installDate, ref rowData))
+                    return BadRequest("Invalid date format. Expected format is YYYYMMDD.");
+
+                List<RowData> entries = new();
+                if (Configuration.useInMemoryStorage)
+                    entries = InMemoryStorage.GetByDate(rowData.DateOfInstallation).ToList();
+                else
+                    entries = await QueryContext.GetByDate(rowData.DateOfInstallation, Context);
+                
+                if (entries.Count == 0)
+                    return NotFound();
+                else
+                    return Ok(entries);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
         }
+
         [HttpGet("/data/address/{address}")]
-        public IActionResult GetByAddress(string address)
+        public async Task<IActionResult> GetByAddress(string address)
         {
-            var entries = InMemoryStorage.GetByAddress(address).ToList();
-            if (entries.Count == 0)
-                return NotFound();
-            else
-                return Ok(entries);
+            try
+            {
+                List<RowData> entries = new();
+                if (Configuration.useInMemoryStorage)
+                    entries = InMemoryStorage.GetByAddress(address).ToList();
+                else
+                    entries = await QueryContext.GetByAddress(address, Context);
+
+                if (entries.Count == 0)
+                    return NotFound();
+                else
+                    return Ok(entries);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
         }
+
         [HttpGet("/data/postcode/{postcode}")]
-        public IActionResult GetByPostcode(string postcode)
+        public async Task<IActionResult> GetByPostcode(string postcode)
         {
-            var entries = InMemoryStorage.GetByPostCode(postcode).ToList();
-            if (entries.Count == 0)
-                return NotFound();
-            else
-                return Ok(entries);
+            try
+            {
+                List<RowData> entries = new();
+                if (Configuration.useInMemoryStorage)
+                    entries = InMemoryStorage.GetByPostCode(postcode).ToList();
+                else
+                    entries = await QueryContext.GetByPostcode(postcode, Context);
+                
+                if (entries.Count == 0)
+                    return NotFound();
+                else
+                    return Ok(entries);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
         }
     }
 }

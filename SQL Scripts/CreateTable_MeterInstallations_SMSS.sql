@@ -52,10 +52,10 @@ GO
 ALTER TABLE [dbo].[RegisteredMeters] CHECK CONSTRAINT [CK_MPAN_FULL_LENGTH]
 GO
 
-ALTER TABLE [dbo].[RegisteredMeters]  WITH CHECK ADD  CONSTRAINT [CK_MPAN_LENGTH] CHECK  ((len([MeterSerial])>=(1) AND len([MeterSerial])<=(10)))
+ALTER TABLE [dbo].[RegisteredMeters]  WITH CHECK ADD  CONSTRAINT [CK_SERIAL_LENGTH] CHECK  ((len([MeterSerial])>=(1) AND len([MeterSerial])<=(10)))
 GO
 
-ALTER TABLE [dbo].[RegisteredMeters] CHECK CONSTRAINT [CK_MPAN_LENGTH]
+ALTER TABLE [dbo].[RegisteredMeters] CHECK CONSTRAINT [CK_SERIAL_LENGTH]
 GO
 
 ALTER TABLE [dbo].[RegisteredMeters]  WITH CHECK ADD  CONSTRAINT [CK_POSTCODE_FORMAT] CHECK  (([PostCode] IS NULL OR [PostCode] like '[A-Z][A-Z][0-9] [0-9][A-Z][A-Z]'))

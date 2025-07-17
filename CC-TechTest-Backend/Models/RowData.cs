@@ -16,9 +16,9 @@ namespace CC_TechTest_Backend.Models
         [Column(TypeName = "date")]
         public DateTime DateOfInstallation { get; set; }
         [MaxLength(40)]
-        public string AddressLine1 { get; set; } = string.Empty;
+        public string? AddressLine1 { get; set; } = string.Empty;
         [MaxLength(10)]
-        public string Postcode { get; set; } = string.Empty;
+        public string? Postcode { get; set; } = string.Empty;
     }
     public class InvalidRowData
     {

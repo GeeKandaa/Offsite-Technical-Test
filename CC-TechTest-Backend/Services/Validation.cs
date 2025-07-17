@@ -90,8 +90,10 @@ namespace CC_TechTest_Backend.Services
             // Expected SQL type is VarChar(40)
             if (Encoding.UTF8.GetByteCount(address) > 40)
                 return false;
-
-            rowData.AddressLine1 = address;
+            if (address == string.Empty)
+                rowData.AddressLine1 = null;
+            else
+                rowData.AddressLine1 = address;
             return true;
         }
 
@@ -101,8 +103,10 @@ namespace CC_TechTest_Backend.Services
             if (Encoding.UTF8.GetByteCount(postcode) > 10 || (!Regex.IsMatch(postcode, @"^[A-Z]{2}\d\s\d[A-Z]{2}$") ^ postcode == string.Empty))
                 return false;
 
-
-            rowData.Postcode = postcode;
+            if (postcode == string.Empty)
+                rowData.Postcode = null;
+            else
+                rowData.Postcode = postcode;
             return true;
         }
     }

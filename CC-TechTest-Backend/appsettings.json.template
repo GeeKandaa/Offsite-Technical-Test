@@ -1,0 +1,12 @@
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
+  "AllowedHosts": "*",
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=<server-address>;Database=CC-TechTest-SQLServer;User Id=<server-user>;Password=<server-user-password>;TrustServerCertificate=True;"
+  }
+}

@@ -1,6 +1,9 @@
-﻿using CC_TechTest_Backend.Models;
+﻿using CC_TechTest_Backend.Configuration;
+using CC_TechTest_Backend.Data;
+using CC_TechTest_Backend.Models;
 using CC_TechTest_Backend.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using System.Data;
 
 namespace CC_TechTest_Backend.Controllers
@@ -9,6 +12,14 @@ namespace CC_TechTest_Backend.Controllers
     [Route("[controller]")]
     public class FileController : ControllerBase
     {
+        private readonly Config Configuration;
+        private MeterDbContext Context;
+        public FileController(IOptions<Config> config, MeterDbContext context)
+        {
+            Configuration = config.Value;
+            Context = context;
+        }
+
         private bool TrySimpleFileValidation(IFormFile file, out string errorMessage)
         {
             errorMessage = string.Empty;
@@ -88,9 +99,17 @@ namespace CC_TechTest_Backend.Controllers
                     successfulCount++;
                 }
 
-                foreach (RowData row in contentFields)
+                if (Configuration.useInMemoryStorage)
                 {
-                    InMemoryStorage.Add(row);
+                    foreach (RowData row in contentFields)
+                    {
+                        InMemoryStorage.Add(row);
+                    }
+                }
+                else
+                {
+                    Context.RegisteredMeters.AddRange(contentFields);
+                    await Context.SaveChangesAsync();
                 }
 
                 return Ok(new {
