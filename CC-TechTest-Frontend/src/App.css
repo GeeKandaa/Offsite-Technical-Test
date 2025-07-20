@@ -4,3 +4,24 @@
   padding: 2rem;
   text-align: center;
 }
+
+.tabs {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.tab-btn {
+  padding: 0.5rem 1rem;
+  background: none;
+  cursor: pointer;
+  font-weight: normal;
+  border: none;
+  border-bottom: 2px solid transparent;
+  transition: font-weight 0.2s, border-bottom 0.2s;
+}
+
+.tab-btn.active {
+  font-weight: bold;
+  border-bottom: 2px solid #0078d4;
+}

@@ -2,6 +2,7 @@ import './DataDisplay.css';
 import { useState, useRef } from "react";
 import { getAllEntries, getEntryByMpan, getEntryBySerial, getEntryByDate, getEntryByAddress, getEntryByPostcode } from "../external/backend";
 
+//#region Interfaces
 interface RowDefinition {
     mpan: BigInt;
     meterSerial : string;
@@ -9,7 +10,8 @@ interface RowDefinition {
     addressLine1: string;
     postcode : string;
 }
-
+//#endregion
+//region Constants
 const SEARCH_FIELDS = [
     { value: 'viewAll', label: 'Search by..' },
     { value: 'mpan', label: 'MPAN' },
@@ -18,25 +20,42 @@ const SEARCH_FIELDS = [
     { value: 'addressLine1', label: 'Address' },
     { value: 'postcode', label: 'Postcode' }
 ]
+//endregion
 
 const DataDisplay = ({ DarkMode }: { DarkMode: Boolean }) => {
+    //#region Component Variables
+    // State variables
     const [entries, setEntries] = useState<Array<RowDefinition>>([]);
     const [singleEntry, setSingleEntry] = useState<RowDefinition | null>(null);
     const [error, setError] = useState<string>('');
     const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
 
+    // Search
     const [searchType, setSearchType] = useState<string>('viewAll');
     const [searchValue, setSearchValue] = useState<string>('');
     const debounceRef = useRef<number | null>(null);
+    //#endregion
 
+    //#region Search Event Handlers
+    /**
+     * Handles the searchbar input change, performing the search after the specified delay.
+     * @param value - The search input value.
+     */
     const handleSearchChange = (value: string) => {
         setSearchValue(value);
+
+        // restart the timer if it has not fired to allow time for user to type query string
         if (debounceRef.current) clearTimeout(debounceRef.current);
+
         debounceRef.current = setTimeout(() => {
             performSearch(searchType, value);
-        }, 500);
+        }, 500); //ms
     }
 
+    /**
+     * Handles the change of search type, resetting the search value and entries.
+     * @param e - The change event from the select input.
+     */
     const handleTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         setSearchType(e.target.value);
         setSearchValue('');
@@ -44,11 +63,22 @@ const DataDisplay = ({ DarkMode }: { DarkMode: Boolean }) => {
         setSingleEntry(null);
     };
 
+    /**
+     * Sends an appropriate GET request as per search type and value
+     * @remarks
+     * This is automatically called as part of the {@link handleSearchChange} event handler
+     * @param type - The type of search to be performed
+     * @param value - The search input value
+     */
     const performSearch = async (type: string, value: string) => {
+        // Clear already existing results
         setError('');
         setEntries([]);
         setSingleEntry(null);
+
+        // prevent empty search requests
         if (!value) return;
+
         try {
             let data;
             switch (type) {
@@ -71,12 +101,18 @@ const DataDisplay = ({ DarkMode }: { DarkMode: Boolean }) => {
                 default:
                     throw new Error('Invalid search type');
             }
+
             setEntries(data);
         } catch (err) {
             setError((err as Error).message);
         }
     }
+    //#endregion
 
+    //#region Button Event Handlers
+    /**
+     * Sends a GET request to retrieve all entries and handles the response
+     */
     const FetchAllEntries = async () => {
         setError('');
         try {
@@ -88,9 +124,14 @@ const DataDisplay = ({ DarkMode }: { DarkMode: Boolean }) => {
         }
     }
 
+    /**
+     * Parses loaded entry data and initiates download to users local machine
+     */
     const DownloadData = () => {
+        // Prevent downloading files with no data..
         if (!entries.length) return;
 
+        // Convert data to string values that conform to upload requirements.
         const header = "MPAN|MeterSerial|DateOfInstallation|AddressLine1|PostCode";
         const rows = entries.map(row =>
             [
@@ -105,18 +146,27 @@ const DataDisplay = ({ DarkMode }: { DarkMode: Boolean }) => {
         );
         const content = [header, ...rows].join("\r\n");
 
+        // Create a temporary blob and URL for the formatted entry data
         const blob = new Blob([content], { type: "text/plain" });
         const url = URL.createObjectURL(blob);
 
+        // Create a temporary anchor element to trigger the download
         const a = document.createElement("a");
         a.href = url;
         a.download = "CC-TechTest-App-Download.txt";
+        // Add anchor to dom, "click" it and then remove it and release the blob URL
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
     };
+    //#endregion
 
+    //#region Render Functions
+    /**
+     * @param rows - Loaded data entries
+     * @returns Rendered table containing entry data
+     */
     const RenderTable = (rows: RowDefinition[]) => (
         <table border={1} cellPadding={6} style={{ marginTop: '10px', width: '100%' }}>
             <thead>
@@ -141,10 +191,13 @@ const DataDisplay = ({ DarkMode }: { DarkMode: Boolean }) => {
             </tbody>
         </table>
     );
+    //#endregion
 
+    //#region Render
     return (
         <div className="container">
             <div className="controls">
+                {/*Search type selection*/}
                 <select
                     className="select"
                     style={{
@@ -154,7 +207,9 @@ const DataDisplay = ({ DarkMode }: { DarkMode: Boolean }) => {
                     } as React.CSSProperties}
                     value={searchType}
                     onChange={handleTypeChange}
-                    >
+                >
+                    {/*viewAll is controlled and labelled by accompanying button,
+                     We use a dynamic label here so that a user is aware they can change to search functions when this is selected*/}
                     <option value="viewAll">
                         {searchType === 'viewAll' ? 'Search by..' : 'View All Entries'}
                     </option>
@@ -162,9 +217,10 @@ const DataDisplay = ({ DarkMode }: { DarkMode: Boolean }) => {
                         <option key={f.value} value={f.value}>{f.label}</option>
                     ))}
                 </select>
+                {/* Search controls*/}
                 {searchType === 'viewAll' ? (
                     <button onClick={FetchAllEntries}>View All Entries</button>) :
-                searchType === "dateOfInstallation" ? (
+                    searchType === "dateOfInstallation" ? (
                         <input
                             className="input"
                             style={{
@@ -191,17 +247,19 @@ const DataDisplay = ({ DarkMode }: { DarkMode: Boolean }) => {
                             />
                     )}
             </div>
+            {/*Error display*/}
             <div className="error">
                 {error && <p style={{ color: 'red' }}>Error: {error}</p>}
             </div>
+            {/*In-line results table*/}
             <div className="table-container"
                 style={{
                     '--table-border': DarkMode ? '#444' : '#ccc',
                     '--table-bg': DarkMode ? '#1e1e1e' : '#f9f9f9'
                 } as React.CSSProperties}>
                 {entries.length > 0 && (
-                    <div className = "sticky-btns"
-                    >
+                    
+                    <div className = "sticky-btns">
                         <button
                             className="action-btn"
                             style={{
@@ -287,5 +345,6 @@ const DataDisplay = ({ DarkMode }: { DarkMode: Boolean }) => {
         </div>
     );
 };
+//#endregion
 
 export default DataDisplay;

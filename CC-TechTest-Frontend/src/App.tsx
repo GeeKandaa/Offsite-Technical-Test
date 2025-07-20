@@ -1,12 +1,19 @@
-import { useEffect, useState } from 'react'
 import './App.css'
+import { useEffect, useState } from 'react'
 import UploadFile from './components/UploadFile'
 import DataDisplay from './components/DataDisplay'
 
 function App() {
+  //#region Variables
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [activeTab, setActiveTab] = useState<'upload' | 'view'>('upload');
+  //#endregion
 
+  //#region UseEffects
+  /** Handle dark mode preference
+   * Detects the user's preferred color scheme and handles preference change.
+   * We perform this here and pass it down to components for consistency.
+   */
   useEffect(() => {
     const darkModePreferred = window.matchMedia('(prefers-color-scheme: dark)');
     setIsDarkMode(darkModePreferred.matches);
@@ -17,33 +24,23 @@ function App() {
       darkModePreferred.removeEventListener('change', preferenceChangeHandler);
     };
   }, []);
+  //#endregion
 
+  //#region Render
   return (
     <>
       <div>
         <h1>CC Technical Test Application</h1>
-        <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+        <div className='tabs'>
           <button
+            className={`tab-btn${activeTab === 'view' ? ' active' : ''}`}
             onClick={() => setActiveTab('upload')}
-            style={{
-              padding: '0.5rem 1rem',
-              borderBottom: activeTab === 'upload' ? '2px solid #0078d4' : '2px solid transparent',
-              background: 'none',
-              cursor: 'pointer',
-              fontWeight: activeTab === 'upload' ? 'bold' : 'normal'
-            }}
           >
             Upload File
           </button>
           <button
+            className={`tab-btn${activeTab === 'view' ? ' active' : ''}`}
             onClick={() => setActiveTab('view')}
-            style={{
-              padding: '0.5rem 1rem',
-              borderBottom: activeTab === 'view' ? '2px solid #0078d4' : '2px solid transparent',
-              background: 'none',
-              cursor: 'pointer',
-              fontWeight: activeTab === 'view' ? 'bold' : 'normal'
-            }}
           >
             View Uploaded Data
           </button>
@@ -64,5 +61,6 @@ function App() {
     </>
   )
 }
+//#endregion
 
 export default App
