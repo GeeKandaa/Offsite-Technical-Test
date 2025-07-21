@@ -10,15 +10,10 @@ namespace CC_TechTest_Backend.Controllers
 {
     [ApiController]
     [Route("[controller]")]
-    public class FileController : ControllerBase
+    public class FileController(IOptions<Config> config, IDataStore dataStore) : ControllerBase
     {
-        private readonly Config Configuration;
-        private MeterDbContext Context;
-        public FileController(IOptions<Config> config, MeterDbContext context)
-        {
-            Configuration = config.Value;
-            Context = context;
-        }
+        private readonly Config Configuration = config.Value;
+        IDataStore DataStore = dataStore;
 
         private bool TrySimpleFileValidation(IFormFile file, out string errorMessage)
         {
@@ -73,7 +68,7 @@ namespace CC_TechTest_Backend.Controllers
         }
 
         [HttpPost("/file")]
-        public async Task<IActionResult> UploadFile(IFormFile file)
+        public IActionResult UploadFile(IFormFile file)
         {
             try
             {
@@ -89,7 +84,7 @@ namespace CC_TechTest_Backend.Controllers
                 {
                     string[] fieldData = contentLines[i].Split('|');
 
-                    if (Validation.TryParseDataRow(contentLines[i], out RowData? rowData, out InvalidRowData _) == false)
+                    if (Validation.TryParseDataRow(contentLines[i], out RowData? rowData, out InvalidRowData? _) == false)
                     {
                         // Skip invalid rows
                         continue;
@@ -99,18 +94,7 @@ namespace CC_TechTest_Backend.Controllers
                     successfulCount++;
                 }
 
-                if (Configuration.useInMemoryStorage)
-                {
-                    foreach (RowData row in contentFields)
-                    {
-                        InMemoryStorage.Add(row);
-                    }
-                }
-                else
-                {
-                    Context.RegisteredMeters.AddRange(contentFields);
-                    await Context.SaveChangesAsync();
-                }
+                DataStore.TryAddMany(contentFields, out _);
 
                 return Ok(new {
                     Message = $"\"{file.FileName}\" uploaded successfully.",
@@ -125,7 +109,7 @@ namespace CC_TechTest_Backend.Controllers
         }
 
         [HttpPost("/file/validate")]
-        public async Task<IActionResult> ValidateFile(IFormFile file)
+        public IActionResult ValidateFile(IFormFile file)
         {
             try
             {
@@ -139,7 +123,7 @@ namespace CC_TechTest_Backend.Controllers
                 int successfulCount = 0;
                 for (int i = 1; i < contentLines.Length; i++)
                 {
-                    if (Validation.TryParseDataRow(contentLines[i], out RowData _, out InvalidRowData invalidRowData) == false)
+                    if (Validation.TryParseDataRow(contentLines[i], out RowData _, out InvalidRowData? invalidRowData) == false)
                     {
                         // Note invalid rows
                         failedValidation.Add(invalidRowData);

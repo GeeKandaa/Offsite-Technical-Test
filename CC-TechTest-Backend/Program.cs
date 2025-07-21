@@ -1,5 +1,6 @@
 using CC_TechTest_Backend.Configuration;
 using CC_TechTest_Backend.Data;
+using CC_TechTest_Backend.Services;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions
@@ -19,11 +20,20 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddControllers();
 builder.Services.AddCors(options =>
 {
-    options.AddDefaultPolicy(policy => policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
+    options.AddDefaultPolicy(policy => 
+        policy.AllowAnyOrigin()
+        .AllowAnyHeader()
+        .AllowAnyMethod());
 });
 
-builder.Services.AddDbContext<MeterDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+if (builder.Configuration.GetSection("Config").Get<Config>().useInMemoryStorage)
+    builder.Services.AddSingleton<IDataStore, InMemoryStorage>();
+else
+{
+    builder.Services.AddDbContext<MeterDbContext>(options =>
+        options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    builder.Services.AddTransient<IDataStore, QueryContext>();
+}
 
 var app = builder.Build();
 

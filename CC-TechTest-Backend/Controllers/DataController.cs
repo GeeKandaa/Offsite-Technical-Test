@@ -7,28 +7,26 @@ using Microsoft.Extensions.Options;
 
 namespace CC_TechTest_Backend.Controllers
 {
+    /// <summary>
+    /// Handles requests to "/data" route
+    /// </summary>
     [ApiController]
     [Route("[controller]")]
-    public class DataController : ControllerBase
+    public class DataController(IOptions<Config> config, IDataStore dataStore) : ControllerBase
     {
-        private readonly Config Configuration;
-        private MeterDbContext Context;
+        private readonly Config Configuration = config.Value;
+        private IDataStore DataStore = dataStore;
 
-        public DataController(IOptions<Config> config, MeterDbContext context)
-        {
-            Configuration = config.Value;
-            Context = context;
-        }
-
+        /// <summary>
+        /// Default behaviour of "/data" route.
+        /// </summary>
+        /// <returns>All stored dataRow entries</returns>
         [HttpGet("/data")]
-        public async Task<IActionResult> GetAll()
+        public IActionResult GetAll()
         {
             try
             {
-                if (Configuration.useInMemoryStorage)
-                    return Ok(InMemoryStorage.GetAll());
-                else
-                    return Ok(await QueryContext.GetAll(Context));
+                return Ok(DataStore.GetAll());
             }
             catch (Exception ex)
             {
@@ -36,16 +34,17 @@ namespace CC_TechTest_Backend.Controllers
             }
         }
 
+        /// <summary>
+        /// Search-by MPAN endpoint: "/data/mpan/{mpan}"
+        /// </summary>
+        /// <param name="mpan">query string</param>
+        /// <returns>List of data rows containing an MPAN that starts with query</returns>
         [HttpGet("/data/mpan/{mpan}")]
-        public async Task<IActionResult> GetByMpan(string mpan)
+        public IActionResult GetByMpan(string mpan)
         {
             try
             {
-                List<RowData> entries = new();
-                if (Configuration.useInMemoryStorage)
-                    entries = InMemoryStorage.GetByMpan(mpan).ToList();
-                else
-                    entries = await QueryContext.GetByMpan(mpan, Context);
+                List<RowData> entries = DataStore.GetByMpan(mpan).ToList();
 
                 if (entries.Count == 0)
                     return NotFound();
@@ -58,17 +57,18 @@ namespace CC_TechTest_Backend.Controllers
             }
         }
 
+        /// <summary>
+        /// Search-by Serial endpoint: "/data/serial/{serial}"
+        /// </summary>
+        /// <param name="serial">query string</param>
+        /// <returns>List of data rows containing a serial that starts with query</returns>
         [HttpGet("/data/serial/{serial}")]
-        public async Task<IActionResult> GetBySerial(string serial)
+        public IActionResult GetBySerial(string serial)
         {        
             try
             {
-                List<RowData> entries = new();
-                if (Configuration.useInMemoryStorage)
-                    entries = InMemoryStorage.GetBySerial(serial).ToList();
-                else
-                    entries = await QueryContext.GetBySerial(serial, Context);
-                
+                List<RowData> entries = DataStore.GetBySerial(serial).ToList();
+
                 if (entries.Count == 0)
                     return NotFound();
                 else
@@ -80,8 +80,13 @@ namespace CC_TechTest_Backend.Controllers
             }
         }
 
+        /// <summary>
+        /// Search-by install date endpoint: "/data/installdate/{installDate}"
+        /// </summary>
+        /// <param name="installData">8-Digit date string: YYYYMMDD</param>
+        /// <returns>List of data rows with date matching query</returns>
         [HttpGet("/data/installdate/{installDate}")]
-        public async Task<IActionResult> GetByDate(string installDate)
+        public IActionResult GetByDate(string installDate)
         {
             try
             {
@@ -89,12 +94,8 @@ namespace CC_TechTest_Backend.Controllers
                 if (!Validation.TryValidateDateOfInstallation(installDate, ref rowData))
                     return BadRequest("Invalid date format. Expected format is YYYYMMDD.");
 
-                List<RowData> entries = new();
-                if (Configuration.useInMemoryStorage)
-                    entries = InMemoryStorage.GetByDate(rowData.DateOfInstallation).ToList();
-                else
-                    entries = await QueryContext.GetByDate(rowData.DateOfInstallation, Context);
-                
+                List<RowData> entries = DataStore.GetByDate(rowData.DateOfInstallation).ToList();
+
                 if (entries.Count == 0)
                     return NotFound();
                 else
@@ -105,17 +106,17 @@ namespace CC_TechTest_Backend.Controllers
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
-
+        /// <summary>
+        /// Search-by address endpoint: "/data/address/{address}"
+        /// </summary>
+        /// <param name="address">query string</param>
+        /// <returns>List of data rows with an address containing query</returns>
         [HttpGet("/data/address/{address}")]
-        public async Task<IActionResult> GetByAddress(string address)
+        public IActionResult GetByAddress(string address)
         {
             try
             {
-                List<RowData> entries = new();
-                if (Configuration.useInMemoryStorage)
-                    entries = InMemoryStorage.GetByAddress(address).ToList();
-                else
-                    entries = await QueryContext.GetByAddress(address, Context);
+                List<RowData> entries = DataStore.GetByAddress(address).ToList();
 
                 if (entries.Count == 0)
                     return NotFound();
@@ -128,17 +129,18 @@ namespace CC_TechTest_Backend.Controllers
             }
         }
 
+        /// <summary>
+        /// Search-by postcode endpoint: "/data/postcode/{postcode}"
+        /// </summary>
+        /// <param name="serial">query string</param>
+        /// <returns>List of data rows containing a postcode that starts with query</returns>
         [HttpGet("/data/postcode/{postcode}")]
-        public async Task<IActionResult> GetByPostcode(string postcode)
+        public IActionResult GetByPostcode(string postcode)
         {
             try
             {
-                List<RowData> entries = new();
-                if (Configuration.useInMemoryStorage)
-                    entries = InMemoryStorage.GetByPostCode(postcode).ToList();
-                else
-                    entries = await QueryContext.GetByPostcode(postcode, Context);
-                
+                List<RowData> entries = DataStore.GetByPostCode(postcode).ToList();
+
                 if (entries.Count == 0)
                     return NotFound();
                 else
