@@ -8,14 +8,23 @@ using System.Data;
 
 namespace CC_TechTest_Backend.Controllers
 {
+    /// <summary>
+    /// Handles requests to "/file" route
+    /// </summary>
+    /// <param name="dataStore">injected IDataStore implementation</param>
     [ApiController]
     [Route("[controller]")]
-    public class FileController(IOptions<Config> config, IDataStore dataStore) : ControllerBase
+    public class FileController(IDataStore dataStore) : ControllerBase
     {
-        private readonly Config Configuration = config.Value;
         IDataStore DataStore = dataStore;
 
-        private bool TrySimpleFileValidation(IFormFile file, out string errorMessage)
+        /// <summary>
+        /// Performs basic validation of file to ensure correct filetype and accessible content
+        /// </summary>
+        /// <param name="file">file to be validated</param>
+        /// <param name="errorMessage">String outlining reason for failing validation</param>
+        /// <returns>Boolean value indicating success</returns>
+        private static bool TrySimpleFileValidation(IFormFile file, out string errorMessage)
         {
             errorMessage = string.Empty;
 
@@ -35,39 +44,74 @@ namespace CC_TechTest_Backend.Controllers
             return true;
         }
 
-        private bool TryUnpackDataFromFile(IFormFile file, out string errorMessage, out string[] contentLines)
+        /// <summary>
+        /// Performs basic validation of file contents and extracts row data from a file.
+        /// </summary>
+        /// <param name="file">file to be validated</param>
+        /// <param name="errorMessage">String outlining reason for failing validation</param>
+        /// <param name="contentLines">Array of data rows extracted from file</param>
+        /// <returns>Boolean value indicating success</returns>
+        private static bool TryUnpackDataFromFile(IFormFile file, out string errorMessage, out IEnumerable<string>? contentLines)
         {
             errorMessage = string.Empty;
             contentLines = [];
 
-            using (StreamReader reader = new StreamReader(file.OpenReadStream()))
+            try
             {
-                string content = reader.ReadToEnd();
-                if (string.IsNullOrWhiteSpace(content))
-                {
-                    errorMessage = "File is empty.";
-                    return false;
-                }
-
-                contentLines = content.Split("\n", StringSplitOptions.RemoveEmptyEntries);
-                if (contentLines.Length < 2)
-                {
-                    errorMessage = "File must contain headers and at least one data row.";
-                    return false;
-                }
-
-                string[] contentHeaders = contentLines[0].Split('|').Select(header => header.Trim()).ToArray();
-                if (!RowData.RequiredHeaders.SequenceEqual(contentHeaders))
-                {
-                    errorMessage = $"Mismatch between required headers and file headers. Required headers are: {string.Join(", ", RowData.RequiredHeaders)}";
-                    return false;
-                }
+                contentLines = UnpackLinesLazily(file, out errorMessage);
+                return (contentLines != null);
             }
-
-            return true;
+            catch (Exception ex)
+            {
+                errorMessage = ex.Message;
+                return false;
+            }
         }
 
+        private static IEnumerable<string>? UnpackLinesLazily(IFormFile file, out string errorMessage)
+        {
+            string errorBuffer;
+            errorMessage = string.Empty;
+
+            return ReadLines();
+
+            IEnumerable<string> ReadLines()
+            {
+                using var stream = file.OpenReadStream();
+                using var reader = new StreamReader(stream);
+
+                string? headerLine = reader.ReadLine();
+                if (string.IsNullOrWhiteSpace(headerLine))
+                {
+                    errorBuffer = "File must contain headers";
+                    yield break;
+                }
+
+                string[] contentHeaders = headerLine.Split('|').Select(h => h.Trim()).ToArray();
+                if (!RowData.RequiredHeaders.SequenceEqual(contentHeaders))
+                {
+                    errorBuffer = $"Mismatch between required headers and file headers. Required headers are: {string.Join(", ", RowData.RequiredHeaders)}";
+                    yield break;
+                }
+
+                while (!reader.EndOfStream)
+                {
+                    string? line = reader.ReadLine();
+                    if (!string.IsNullOrWhiteSpace(line))
+                        yield return line;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Default behaviour of "/file" route.
+        /// </summary>
+        /// <param name="file">File to be uploaded, supplied in the request body</param>
+        /// <returns>Object containing success message and the number of rows that passed/failed validation</returns>
         [HttpPost("/file")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public IActionResult UploadFile(IFormFile file)
         {
             try
@@ -75,20 +119,16 @@ namespace CC_TechTest_Backend.Controllers
                 if (!TrySimpleFileValidation(file, out string errorMessage))
                     return BadRequest(errorMessage);
 
-                if(!TryUnpackDataFromFile(file, out errorMessage, out string[] contentLines))
+                if(!TryUnpackDataFromFile(file, out errorMessage, out IEnumerable<string>? contentLines))
                     return BadRequest(errorMessage);
 
                 List<RowData> contentFields = new();
                 int successfulCount = 0;
-                for (int i = 1; i < contentLines.Length; i++)
-                {
-                    string[] fieldData = contentLines[i].Split('|');
 
-                    if (Validation.TryParseDataRow(contentLines[i], out RowData? rowData, out InvalidRowData? _) == false)
-                    {
-                        // Skip invalid rows
+                foreach(string line in contentLines)
+                {
+                    if (!Validation.TryParseDataRow(line, out RowData? rowData, out InvalidRowData? _))
                         continue;
-                    }
 
                     contentFields.Add(rowData);
                     successfulCount++;
@@ -99,7 +139,7 @@ namespace CC_TechTest_Backend.Controllers
                 return Ok(new {
                     Message = $"\"{file.FileName}\" uploaded successfully.",
                     SuccessCount = successfulCount,
-                    FailureCount = contentLines.Length - successfulCount
+                    FailureCount = contentLines.Count() - successfulCount
                 });
             }
             catch (Exception ex)
@@ -108,7 +148,15 @@ namespace CC_TechTest_Backend.Controllers
             }
         }
 
+        /// <summary>
+        /// File validation endpoint: "/file/validate"
+        /// </summary>
+        /// <param name="file">File to be validated, supplied in the request body</param>
+        /// <returns>Object containing success message and the number of rows that passed/failed validation</returns>
         [HttpPost("/file/validate")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public IActionResult ValidateFile(IFormFile file)
         {
             try
@@ -116,14 +164,14 @@ namespace CC_TechTest_Backend.Controllers
                 if (!TrySimpleFileValidation(file, out string errorMessage))
                 return BadRequest(errorMessage);
 
-                if(!TryUnpackDataFromFile(file, out errorMessage, out string[] contentLines))
+                if(!TryUnpackDataFromFile(file, out errorMessage, out IEnumerable<string>? contentLines))
                     return BadRequest(errorMessage);
 
                 List<InvalidRowData> failedValidation = new();
                 int successfulCount = 0;
-                for (int i = 1; i < contentLines.Length; i++)
+                foreach (string line in contentLines)
                 {
-                    if (Validation.TryParseDataRow(contentLines[i], out RowData _, out InvalidRowData? invalidRowData) == false)
+                    if (Validation.TryParseDataRow(line, out RowData _, out InvalidRowData? invalidRowData) == false)
                     {
                         // Note invalid rows
                         failedValidation.Add(invalidRowData);
@@ -138,7 +186,7 @@ namespace CC_TechTest_Backend.Controllers
                     Message = $"Performed validation on \"{file.FileName}\".",
                     FailedRows = failedValidation,
                     SuccessCount = successfulCount,
-                    FailureCount = contentLines.Length - successfulCount
+                    FailureCount = contentLines.Count() - successfulCount
                 });
             }
             catch (Exception ex)

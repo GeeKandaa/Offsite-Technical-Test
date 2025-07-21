@@ -6,7 +6,7 @@ namespace CC_TechTest_Backend.Models
     public class RowData
     {
         public static readonly string[] RequiredHeaders = ["MPAN", "MeterSerial", "DateOfInstallation", "AddressLine1", "PostCode"];
-        [Key]
+        [Required]
         [Column(TypeName = "numeric(13,0)")]
         public long MPAN { get; set; }
         [Required]

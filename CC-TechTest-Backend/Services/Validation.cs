@@ -13,7 +13,7 @@ namespace CC_TechTest_Backend.Services
             return (fields.Length > index ? fields[index].Trim() : string.Empty);
         }
 
-        public static bool TryParseDataRow(string row, out RowData validRow, out InvalidRowData invalidRow)
+        public static bool TryParseDataRow(string row, out RowData validRow, out InvalidRowData? invalidRow)
         {
             validRow = new();
             invalidRow = null;

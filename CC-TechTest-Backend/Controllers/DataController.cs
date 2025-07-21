@@ -1,5 +1,4 @@
 ﻿using CC_TechTest_Backend.Configuration;
-using CC_TechTest_Backend.Data;
 using CC_TechTest_Backend.Models;
 using CC_TechTest_Backend.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -10,11 +9,11 @@ namespace CC_TechTest_Backend.Controllers
     /// <summary>
     /// Handles requests to "/data" route
     /// </summary>
+    /// <param name="dataStore">injected IDataStore implementation</param>
     [ApiController]
     [Route("[controller]")]
-    public class DataController(IOptions<Config> config, IDataStore dataStore) : ControllerBase
+    public class DataController(IDataStore dataStore) : ControllerBase
     {
-        private readonly Config Configuration = config.Value;
         private IDataStore DataStore = dataStore;
 
         /// <summary>
@@ -22,11 +21,18 @@ namespace CC_TechTest_Backend.Controllers
         /// </summary>
         /// <returns>All stored dataRow entries</returns>
         [HttpGet("/data")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public IActionResult GetAll()
         {
             try
             {
-                return Ok(DataStore.GetAll());
+                IEnumerable<RowData> rows = DataStore.GetAll();
+                if (rows.Count() > 0)
+                    return Ok(rows);
+                else
+                    return NoContent();
             }
             catch (Exception ex)
             {
@@ -40,6 +46,9 @@ namespace CC_TechTest_Backend.Controllers
         /// <param name="mpan">query string</param>
         /// <returns>List of data rows containing an MPAN that starts with query</returns>
         [HttpGet("/data/mpan/{mpan}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public IActionResult GetByMpan(string mpan)
         {
             try
@@ -63,6 +72,9 @@ namespace CC_TechTest_Backend.Controllers
         /// <param name="serial">query string</param>
         /// <returns>List of data rows containing a serial that starts with query</returns>
         [HttpGet("/data/serial/{serial}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public IActionResult GetBySerial(string serial)
         {        
             try
@@ -86,6 +98,10 @@ namespace CC_TechTest_Backend.Controllers
         /// <param name="installData">8-Digit date string: YYYYMMDD</param>
         /// <returns>List of data rows with date matching query</returns>
         [HttpGet("/data/installdate/{installDate}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public IActionResult GetByDate(string installDate)
         {
             try
@@ -112,6 +128,9 @@ namespace CC_TechTest_Backend.Controllers
         /// <param name="address">query string</param>
         /// <returns>List of data rows with an address containing query</returns>
         [HttpGet("/data/address/{address}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public IActionResult GetByAddress(string address)
         {
             try
@@ -135,6 +154,9 @@ namespace CC_TechTest_Backend.Controllers
         /// <param name="serial">query string</param>
         /// <returns>List of data rows containing a postcode that starts with query</returns>
         [HttpGet("/data/postcode/{postcode}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public IActionResult GetByPostcode(string postcode)
         {
             try
